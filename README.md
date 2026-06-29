@@ -118,7 +118,7 @@ context, not used as source material.
 
 - 山本 敦也, 保木 邦仁. **NOCCA×NOCCAの強解決** (Strongly Solving NOCCA×NOCCA).
   第27回ゲーム・プログラミングワークショップ (GPW 2022), 情報処理学会, 2022.
-  <https://ipsj.ixsq.nii.ac.jp/record/221985/>
+  <https://cir.nii.ac.jp/crid/1050856970555547904>
 
 **Related work**
 
@@ -128,7 +128,7 @@ context, not used as source material.
   reproduced here as a cross-check oracle (≤5×5).
 - 池内 明伸, 山口 勇太郎. **ボードゲーム「ノッカノッカ」の一般化と解析**.
   情報処理学会研究報告 Vol.2022-AL-189, No.6, 2022.
-  <https://ipsj.ixsq.nii.ac.jp/record/220144/> — generalizes the board to (n×m)-NOCCA
+  <https://jglobal.jst.go.jp/detail?JGLOBAL_ID=202202214390869382> — generalizes the board to (n×m)-NOCCA
   and proves the initial position is a draw for n=2, m≥5 and n=3, m≥7.
 - 諏訪 壮紀. **ボードゲーム「ノッカノッカ」の解析** (Analysis of a Board Game "NOCCA NOCCA").
   法政大学情報科学部 卒業論文要旨, 2022.
