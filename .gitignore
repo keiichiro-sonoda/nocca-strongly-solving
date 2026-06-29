@@ -1,0 +1,22 @@
+# Rust build output
+/target
+**/*.rs.bk
+
+# Large, regenerable solver artifacts (NOT published — regenerate via REPRODUCING.md;
+# only the small verifiable summaries under results/ are committed).
+# reachable / self-symmetric bitsets (~9.25 GB each at 6x5):
+*.bits
+# DTM streams (e.g. the 368 GB 6x5 stream):
+*.stream
+dtm.meta
+# BFS checkpoints / retrograde snapshots:
+bfs.*
+snap.*
+
+# Copyrighted paper (not ours to distribute):
+*.pdf
+
+# scratch
+.libtest.log
+
+# NOTE: Cargo.lock IS committed (this crate ships binaries → reproducible builds).

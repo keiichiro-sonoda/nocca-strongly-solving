@@ -1,0 +1,24 @@
+[package]
+name = "nocca"
+version = "0.1.0"
+edition = "2021"
+authors = ["Keiichiro Sonoda"]
+license = "MIT OR Apache-2.0"
+description = "Size-parametric strong solving of NOCCA×NOCCA by retrograde analysis (value + DTM for every position) — an independent reproduction of the full 6×5 result (Yamamoto–Hoki, GPW 2022)."
+readme = "README.md"
+keywords = ["game-solving", "retrograde-analysis", "combinatorial-game", "nocca"]
+categories = ["algorithms", "science"]
+# repository = "https://github.com/<you>/nocca-strongly-solving"  # ← set on publish
+
+# Dependencies: rayon only (parallel set-bit / predecessor / child generation in
+# the retrogrades and the forward reachability BFS). External sort stays
+# sequential (memory-bandwidth bound). No GPL or other copyleft dependencies.
+
+[dependencies]
+rayon = "1"
+
+[profile.dev]
+opt-level = 2
+
+[profile.release]
+lto = true
