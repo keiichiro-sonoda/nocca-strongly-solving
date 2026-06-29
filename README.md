@@ -1,6 +1,7 @@
 # NOCCA×NOCCA — strongly solved (independent reproduction)
 
-A size-parametric **strong solver** for the two-player board game **NOCCA×NOCCA**, and
+A size-parametric **strong solver** for the two-player board game
+**[NOCCA×NOCCA](https://www.undanoga.com/)** (published by Undanoga, 2017), and
 an **independent reproduction** of the full 6×5 result first published by
 **Yamamoto & Hoki, 「NOCCA×NOCCAの強解決」 / "Strongly Solving NOCCA×NOCCA",
 第27回ゲーム・プログラミングワークショップ (GPW 2022)**.
@@ -108,8 +109,28 @@ stream is byte-deterministic — its SHA256 and per-round census are in `results
 Single dependency: [`rayon`](https://crates.io/crates/rayon) (parallelism). No copyleft
 dependencies. Dual-licensed **MIT OR Apache-2.0** (`LICENSE-MIT`, `LICENSE-APACHE`).
 
-## Citation
+## References
 
-Original result reproduced here:
-山本 敦也, 保木 邦仁. **NOCCA×NOCCAの強解決** (Strongly Solving NOCCA×NOCCA).
-第27回ゲーム・プログラミングワークショップ (GPW 2022), 情報処理学会, 2022.
+This is an independent reproduction; the works below are cited for validation and
+context, not used as source material.
+
+**Primary result reproduced here**
+
+- 山本 敦也, 保木 邦仁. **NOCCA×NOCCAの強解決** (Strongly Solving NOCCA×NOCCA).
+  第27回ゲーム・プログラミングワークショップ (GPW 2022), 情報処理学会, 2022.
+  <https://ipsj.ixsq.nii.ac.jp/record/221985/>
+
+**Related work**
+
+- 松本 優希, 黒田 久泰. **ノッカノッカの縮小版に対する後退解析**.
+  第84回全国大会講演論文集, 情報処理学会, 2022, pp. 437–438.
+  <https://cir.nii.ac.jp/crid/1050575495579222912> — the reduced-version retrograde
+  reproduced here as a cross-check oracle (≤5×5).
+- 池内 明伸, 山口 勇太郎. **ボードゲーム「ノッカノッカ」の一般化と解析**.
+  情報処理学会研究報告 Vol.2022-AL-189, No.6, 2022.
+  <https://ipsj.ixsq.nii.ac.jp/record/220144/> — generalizes the board to (n×m)-NOCCA
+  and proves the initial position is a draw for n=2, m≥5 and n=3, m≥7.
+- 諏訪 壮紀. **ボードゲーム「ノッカノッカ」の解析** (Analysis of a Board Game "NOCCA NOCCA").
+  法政大学情報科学部 卒業論文要旨, 2022.
+  <https://hosobe.cis.k.hosei.ac.jp/lab/wp-content/uploads/2022/03/t_suwa-bthesis-abstract.pdf>
+  — retrograde analysis of reduced versions (bachelor's thesis abstract).
