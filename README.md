@@ -12,7 +12,7 @@ an **independent reproduction** of the full 6×5 result first published by
 > moves**" is just one entry of that full solution.
 
 > **Headline check:** the full per-move distribution of decided positions matches paper
-> B's Table A.1 to **45 representatives out of 73.99 billion** (6×10⁻⁷). The only
+> B's Table A.1 to **45 representatives out of 73.99 billion** (6×10⁻¹⁰). The only
 > difference: paper B reports over a *pseudo-reachable* (over-approximate) set, while
 > this work computes the *exact* reachable set — so our numbers are the precise subset,
 > and we even recover a digit the published table dropped (ply-48).
@@ -28,7 +28,7 @@ the original. See [`results/RESULT.md`](results/RESULT.md) and
 | **All positions** (the strong solution) | value + DTM for **73,995,673,500** mirror reps |
 | full-space W / L / D | 53,077,668,702 / 20,570,045,468 / 347,959,330 |
 | initial position (6×5) | **first-player WIN, DTM 41** |
-| reachable W/L/D (Table 8) / per-ply (Table A.1) | match paper B to 45 reps (6×10⁻⁷); **67/69 rows exact** |
+| reachable W/L/D (Table 8) / per-ply (Table A.1) | match paper B to 45 reps (6×10⁻¹⁰); **67/69 rows exact** |
 | deepest win / no-move terminals / avg branching | 69 plies (30) / 30 / 23.4 — all match |
 
 ## How it works

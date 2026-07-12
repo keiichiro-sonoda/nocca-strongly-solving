@@ -73,4 +73,4 @@ combinatorial conditions — by construction a **superset** of the truly-reachab
 forward BFS computes the **exact** truly-reachable set (validated bit-for-bit against an
 independent `HashSet<canonical_key>` BFS at 3×3 / 4×3 / 4×4). The 45 reps are
 pseudo-reachable-but-not-truly-reachable; this work correctly excludes them, so the
-distributions agree to within those 45 reps (6e-7 of R_full).
+distributions agree to within those 45 reps (6e-10 of R_full).

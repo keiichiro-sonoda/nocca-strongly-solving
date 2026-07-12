@@ -36,7 +36,7 @@ projects the full-space solution onto it.
 | **D** no-legal-move (終端) configs | 30 | 30 | **EXACT** |
 | **D** avg legal moves (non-terminal) | 23.391 | 23.4 | match |
 
-The only residual is **45 representatives out of 73.99 billion (6e-7)**, concentrated
+The only residual is **45 representatives out of 73.99 billion (6e-10)**, concentrated
 at plies 1 and 4 (Table A.1) — see `comparison_with_paperB.md`. It is fully explained:
 paper B's "擬到達可能" (pseudo-reachable) is, by their own definition, a combinatorial
 **superset** of the truly-reachable set; this work's forward BFS computes the exact
