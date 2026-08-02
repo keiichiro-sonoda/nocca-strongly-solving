@@ -8,11 +8,13 @@
 //! compares to Table 8 (reachable W/L/D) and Table A.1 (per-ply distribution).
 //!
 //! Usage:
-//!   reachproj <rows> <cols> <stream_dir> --work-dir DIR [--stage 1|2|3|all]
+//!   reachproj <rows> <cols> <stream_dir> --work-dir DIR [--stage 1|2|3|all|uf|cand]
 //!     stage 1  forward BFS → reachable.bits + census (照合A, avg moves, terminals)
 //!     stage 2  self-symmetric bitset → selfsym.bits + |selfsym|, |selfsym∩reach|
 //!     stage 3  stream projection → un-fold → Table 8 / Table A.1 comparison
 //!     all      1→2→3 in one process (bitsets kept in RAM)
+//!     uf       full-space un-fold vs Table A.1
+//!     cand     clear bits of reachable.bits + their value/DTM → candidates.csv
 
 use nocca::inmem_retro::{
     bitset_intersection_count, dump_atomic_words, load_atomic_words, project_stream,
@@ -50,10 +52,42 @@ fn load_bits(r_full: u64, path: &Path) -> BitSet {
     bs
 }
 
+/// `"B|.|WB|.|./..."` — row 0 (side-to-move's home row) first, cells left to right.
+/// A cell is `.` when empty, else its stack bottom→top (`B` = side to move).
+/// Separators are `|`/`/` so the field remains a single CSV column.
+fn board_str(b: &nocca::varboard::VarBoard) -> String {
+    let (rows, cols) = (b.rows(), b.cols());
+    let key = b.key();
+    let mut s = String::with_capacity(rows * cols * 2);
+    for r in 0..rows {
+        if r > 0 {
+            s.push('/');
+        }
+        for c in 0..cols {
+            if c > 0 {
+                s.push('|');
+            }
+            let code = ((key >> ((r * cols + c) * 4)) & 0xF) as u8;
+            if code == 0 {
+                s.push('.');
+                continue;
+            }
+            let h = 31 - (code as u32).leading_zeros();
+            for i in (0..h).rev() {
+                s.push(if (code >> i) & 1 == 1 { 'B' } else { 'W' });
+            }
+        }
+    }
+    s
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.len() < 3 {
-        eprintln!("usage: reachproj <rows> <cols> <stream_dir> --work-dir DIR [--stage 1|2|3|all]");
+        eprintln!(
+            "usage: reachproj <rows> <cols> <stream_dir> --work-dir DIR \
+             [--stage 1|2|3|all|uf|cand]"
+        );
         std::process::exit(2);
     }
     let rows: usize = args[0].parse().expect("rows");
@@ -157,31 +191,52 @@ fn main() {
         let proj = project_stream(&stream_dir, &reach, &ss).expect("project_stream");
         eprintln!("[reachproj] stream projected in {:.1}s", t.elapsed().as_secs_f64());
 
-        // Totals over mirror reps and self-symmetric reps.
+        // Table 8 excludes no-move/DTM0 terminals. Keep their round-0 counts
+        // separate and compare the exact reachable non-terminal set R − N.
         let (mut mw, mut ml, mut sw, mut sl) = (0u64, 0u64, 0u64, 0u64);
         for r in &proj {
+            if r.round == 0 {
+                continue;
+            }
             mw += r.mwin;
             ml += r.mlose;
             sw += r.swin;
             sl += r.slose;
         }
-        let mdraw = reach_total - mw - ml;
-        let sdraw = sreach_total - sw - sl;
+        let round0 = proj.iter().find(|r| r.round == 0);
+        let no_move_mirror = round0.map_or(0, |r| r.mlose);
+        let no_move_sym = round0.map_or(0, |r| r.slose);
+        let nonterm_total = reach_total - no_move_mirror;
+        let nonterm_sym_total = sreach_total - no_move_sym;
+        let mdraw = nonterm_total - mw - ml;
+        let sdraw = nonterm_sym_total - sw - sl;
         // Un-fold: pseudo = 2*mirror - self_sym.
         let pw = 2 * mw - sw;
         let pl = 2 * ml - sl;
         let pd = 2 * mdraw - sdraw;
-        println!("--- STAGE3 reachable totals (mirror-rep) W/L/D = {mw} / {ml} / {mdraw} (reach={reach_total}) ---");
-        println!("--- self-sym reachable W/L/D = {sw} / {sl} / {sdraw} (S_reach={sreach_total}) ---");
-        println!("=== 照合B 表8(pseudo-reachable) W/L/D = {pw} / {pl} / {pd} ===");
+        println!(
+            "--- STAGE3 exact reachable non-terminal (mirror-rep) W/L/D = \
+             {mw} / {ml} / {mdraw} (R−N={nonterm_total}, N={no_move_mirror}) ---"
+        );
+        println!(
+            "--- self-sym non-terminal W/L/D = {sw} / {sl} / {sdraw} \
+             (S_nonterm={nonterm_sym_total}, S_N={no_move_sym}) ---"
+        );
+        println!("=== 照合B 表8 comparison basis W/L/D = {pw} / {pl} / {pd} ===");
         println!("    paper B 表8              = 106144078911 / 41129930509 / 695889860");
-        println!("    pseudo total = {} (paper 147969899280)", pw + pl + pd);
+        println!(
+            "    exact non-terminal un-folded total = {} (paper P = 147969899280)",
+            pw + pl + pd
+        );
 
         // Per-ply (DTM) un-folded distribution → Table A.1 (win=odd round, lose=even).
         // round = DTM = paper手数 (D1 convention). r0 = no-move terminals (DTM0 lose).
         println!("=== 照合C 表A.1 (pseudo per-手数) ===");
         println!("{:>4} {:>6} {:>18} {:>18}", "手数", "種別", "pseudo(=2m-s)", "paperA.1");
         for r in &proj {
+            if r.round == 0 {
+                continue;
+            }
             let (m, s, kind) = if r.round % 2 == 1 {
                 (r.mwin, r.swin, "勝ち")
             } else {
@@ -204,12 +259,148 @@ fn main() {
                 tag
             );
         }
-        println!("    (注: r0=DTM0手詰終端は表A.1外。終端種別オフセットは層ごとに要確認)");
+        println!("    (注: r0=DTM0手詰終端は表8・表A.1の比較対象外)");
         println!("peakRSS={:.1}GiB", peak_rss_gib());
     }
 
-    // -------- stage uf: full-space un-fold vs Table A.1 (residual = pure unreachable) --------
-    // pseudo_full(k) = 2·full_mirror(k) − sym_full(k); residual = pseudo_full − paperA.1 = 2·unreachable(k).
+    // -------- stage cand: unreachable reps + their solved value/DTM --------
+    // Let R be the exact forward-reachable set, N its no-move terminals, P paper
+    // B's ZDD set, T the exceptional no-move terminals retained in P, and U the
+    // ZDD-member positions that are not actually reachable:
+    //
+    //   P = (R − (N − T)) ∪ U.
+    //
+    // At 6×5, |T|=15 mirror reps and |U|=30. U lies among the clear bits of
+    // reachable.bits, so this stage emits every clear bit with its full-space
+    // value/DTM. tools/paper_b_verification/filter_candidates then intersects
+    // that pool with the authors' ZDD and recovers the 30 reps.
+    if stage == "cand" {
+        let t0 = Instant::now();
+        let bits = load_bits(r_full, &reach_path);
+        let reach_count = bits.count();
+        eprintln!(
+            "[cand] reachable.bits loaded: set={reach_count} clear={} ({:.1}s)",
+            r_full - reach_count,
+            t0.elapsed().as_secs_f64()
+        );
+
+        // Clear bits (ascending) = the candidate pool.
+        let mut cands: Vec<u64> = Vec::new();
+        for (wi, w) in bits.words().iter().enumerate() {
+            let base = (wi as u64) << 6;
+            let mut z = !w.load(std::sync::atomic::Ordering::Relaxed);
+            while z != 0 {
+                let b = z.trailing_zeros() as u64;
+                z &= z - 1;
+                if base + b < r_full {
+                    cands.push(base + b);
+                }
+            }
+        }
+        eprintln!("[cand] candidate pool = {} reps", cands.len());
+        assert_eq!(cands.len() as u64, r_full - reach_count);
+
+        // Invert in place so the stream scan marks exactly the pool. Tail bits
+        // past r_full also flip, but every stream rank is below r_full.
+        for w in bits.words() {
+            w.fetch_xor(u64::MAX, std::sync::atomic::Ordering::Relaxed);
+        }
+
+        // 0 = draw (never decided), 1 = win, 2 = lose.
+        let mut kind = vec![0u8; cands.len()];
+        let mut dtm = vec![0u32; cands.len()];
+        let t = Instant::now();
+        let mut hits = 0u64;
+        nocca::inmem_retro::scan_stream_marked(&stream_dir, &bits, |rank, round, is_win| {
+            let i = cands.binary_search(&rank).expect("marked rank must be in pool");
+            kind[i] = if is_win { 1 } else { 2 };
+            dtm[i] = round;
+            hits += 1;
+        })
+        .expect("scan_stream_marked");
+        eprintln!(
+            "[cand] stream scanned in {:.1}s: {hits} of {} candidates decided (rest = draw)",
+            t.elapsed().as_secs_f64(),
+            cands.len()
+        );
+
+        let out_path = work.join("candidates.csv");
+        let f = std::fs::File::create(&out_path).expect("create candidates.csv");
+        let mut w = BufWriter::with_capacity(8 << 20, f);
+        use std::io::Write;
+        writeln!(w, "# unreachable mirror reps of {rows}x{cols} (clear bits of reachable.bits)")
+            .unwrap();
+        writeln!(w, "# board: row 0 (= side-to-move's home row) first, rows split by '/', cells by '|';")
+            .unwrap();
+        writeln!(w, "# a cell is '.' (empty) or its stack bottom->top, B = side to move, W = opponent.")
+            .unwrap();
+        writeln!(w, "# key_hex: VarBoard::key(), cell i in nibble i (little-endian), i = row*cols + col.")
+            .unwrap();
+        writeln!(w, "rank,value,dtm,selfsym,nmoves,try_win,key_hex,board").unwrap();
+
+        let mut mv: Vec<(usize, usize)> = Vec::new();
+        let mut by_kind: std::collections::BTreeMap<(u8, u32), u64> =
+            std::collections::BTreeMap::new();
+        let mut n_selfsym = 0u64;
+        for (i, &rank) in cands.iter().enumerate() {
+            let b = mr.mirror_unrank_fast2(rank);
+            let selfsym = b == b.mirror();
+            if selfsym {
+                n_selfsym += 1;
+            }
+            b.moves(&mut mv, true);
+            let value = match kind[i] {
+                1 => "Win",
+                2 => "Lose",
+                _ => "Draw",
+            };
+            *by_kind.entry((kind[i], dtm[i])).or_insert(0) += 1;
+            writeln!(
+                w,
+                "{rank},{value},{},{},{},{},{:032x},{}",
+                dtm[i],
+                u8::from(selfsym),
+                mv.len(),
+                u8::from(b.try_win()),
+                b.key(),
+                board_str(&b)
+            )
+            .unwrap();
+        }
+        w.flush().unwrap();
+
+        println!("=== STAGE cand: unreachable reps of {rows}x{cols} ===");
+        println!(
+            "pool={} selfsym={n_selfsym} → {}",
+            cands.len(),
+            out_path.display()
+        );
+        println!("{:>6} {:>5} {:>12}", "value", "dtm", "reps");
+        for ((k, d), n) in &by_kind {
+            let v = match k {
+                1 => "Win",
+                2 => "Lose",
+                _ => "Draw",
+            };
+            println!("{v:>6} {d:>5} {n:>12}");
+        }
+        if (rows, cols) == (6, 5) {
+            let p: i128 = 73_986_754_080;
+            let n: i128 = 4_459_725;
+            let t: i128 = 15;
+            let u = p - reach_count as i128 + n - t;
+            println!(
+                "paper P={p} / exact R={reach_count} / no-move N={n} / \
+                 retained terminal T={t} ⇒ |U|={u} (ZDD filter expected: 30)"
+            );
+        }
+        println!("peakRSS={:.1}GiB", peak_rss_gib());
+    }
+
+    // -------- stage uf: full-space un-fold vs Table A.1 --------
+    // pseudo_full(k) = 2·full_mirror(k) − sym_full(k). The residual against
+    // paper A.1 is the full-space complement of paper P at that DTM, not merely
+    // the exact-reachability complement.
     if stage == "uf" {
         let ss = if sym_path.exists() {
             load_bits(r_full, &sym_path)
@@ -238,7 +429,7 @@ fn main() {
         }
 
         println!("=== 全空間un-fold (pseudo_full=2·mirror−sym) vs 表A.1 ===");
-        println!("{:>4} {:>6} {:>20} {:>20} {:>16}", "手数", "種別", "pseudo_full", "paperA.1", "残差(2·到達不能)");
+        println!("{:>4} {:>6} {:>20} {:>20} {:>16}", "手数", "種別", "pseudo_full", "paperA.1", "残差(full−P)");
         let (mut tot_resid, mut tot_sym) = (0i128, 0u64);
         for (round, nw, nl) in &full {
             let (decided, sym, kind) = if round % 2 == 1 {
@@ -259,14 +450,14 @@ fn main() {
                 }
             }
         }
-        println!("Σ残差(全層) = {tot_resid}  (= 2·到達不能総数)  Σsym(全空間) = {tot_sym}");
+        println!("Σ残差(全層) = {tot_resid}  (= full-space − paper P by DTM)  Σsym(全空間) = {tot_sym}");
         println!("peakRSS={:.1}GiB", peak_rss_gib());
     }
 }
 
-/// Paper B Table A.1 per-手数 counts (win on odd, lose on even). Win rows verified
-/// (Σ = 106,144,078,911 = Table 8 win). Lose rows have a −3 transcription artifact
-/// to resolve from the raw text; Σ even should be 41,129,930,509.
+/// Paper B Table A.1 per-手数 counts (win on odd, lose on even). Both columns are
+/// verified against Table 8: Σodd = 106,144,078,911 and Σeven = 41,129,930,509.
+/// The GPW PDF truncates ply 48; the journal version's Table A·3 gives 879,284.
 fn paper_a1(ply: u32) -> Option<u64> {
     let v: u64 = match ply {
         1 => 77_645_562_828, 2 => 22_410_730_165, 3 => 15_142_536_934, 4 => 7_707_358_885,
@@ -280,7 +471,7 @@ fn paper_a1(ply: u32) -> Option<u64> {
         33 => 51_549_796, 34 => 36_136_187, 35 => 26_077_221, 36 => 18_510_133,
         37 => 12_725_495, 38 => 9_461_541, 39 => 6_281_721, 40 => 5_122_307,
         41 => 3_427_186, 42 => 3_122_345, 43 => 2_027_453, 44 => 2_001_316,
-        45 => 1_256_933, 46 => 1_327_058, 47 => 815_882, 48 => 879_281,
+        45 => 1_256_933, 46 => 1_327_058, 47 => 815_882, 48 => 879_284,
         49 => 516_770, 50 => 535_828, 51 => 313_835, 52 => 305_484,
         53 => 194_950, 54 => 176_195, 55 => 123_798, 56 => 111_626,
         57 => 77_589, 58 => 65_019, 59 => 36_591, 60 => 29_351,
@@ -289,4 +480,17 @@ fn paper_a1(ply: u32) -> Option<u64> {
         _ => return None,
     };
     Some(v)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::paper_a1;
+
+    #[test]
+    fn paper_a1_columns_sum_to_table8() {
+        let win: u64 = (1..=69).filter(|ply| ply % 2 == 1).filter_map(paper_a1).sum();
+        let lose: u64 = (1..=69).filter(|ply| ply % 2 == 0).filter_map(paper_a1).sum();
+        assert_eq!(win, 106_144_078_911);
+        assert_eq!(lose, 41_129_930_509);
+    }
 }

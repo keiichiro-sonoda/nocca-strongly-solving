@@ -1818,6 +1818,45 @@ pub fn project_stream(dir: &Path, reachable: &BitSet, self_sym: &BitSet) -> io::
     Ok(rows)
 }
 
+/// Single streaming pass over the committed DTM stream calling `f(rank, round,
+/// is_win)` for every decided rank set in `mark`.
+///
+/// This has the same bounded-memory shape as [`project_stream`], but exposes
+/// individual ranks instead of aggregate counts. It is used to attach values
+/// and DTMs to the unreachable candidate pool. Marked ranks that never occur in
+/// the stream are draws and are detected by the caller through exclusion.
+pub fn scan_stream_marked<F: FnMut(u64, u32, bool)>(
+    dir: &Path,
+    mark: &BitSet,
+    mut f: F,
+) -> io::Result<()> {
+    let (_, committed) =
+        read_meta(dir).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no marker"))?;
+    let file = fs::File::open(stream_path(dir))?;
+    let mut r = io::BufReader::with_capacity(8 << 20, file);
+    let mut consumed = 0u64;
+    let mut hdr = [0u8; 20];
+    let mut buf: Vec<u8> = Vec::new();
+    while consumed < committed {
+        r.read_exact(&mut hdr)?;
+        let round = u32::from_le_bytes(hdr[0..4].try_into().unwrap());
+        let nw = u64::from_le_bytes(hdr[4..12].try_into().unwrap());
+        let nl = u64::from_le_bytes(hdr[12..20].try_into().unwrap());
+        consumed += 20 + (nw + nl) * 5;
+        read_records(&mut r, nw, &mut buf, |x| {
+            if mark.get(x) {
+                f(x, round, true);
+            }
+        })?;
+        read_records(&mut r, nl, &mut buf, |x| {
+            if mark.get(x) {
+                f(x, round, false);
+            }
+        })?;
+    }
+    Ok(())
+}
+
 // ================================ tests =====================================
 
 #[cfg(test)]

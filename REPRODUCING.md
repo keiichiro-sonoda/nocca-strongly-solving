@@ -11,9 +11,10 @@ Binaries (in `target/release/`):
 - `inmem <rows> <cols> <stream_dir> [--conv d1|d0] [--snap-dir DIR] [--snap-interval SECS] [--base]`
   — full-space retrograde; writes the per-round distance-to-mate **stream** to `<stream_dir>`.
   `--conv d1` = paper-B counting (try-win = DTM 1). Re-run the same command to resume.
-- `reachproj <rows> <cols> <stream_dir> --work-dir DIR [--stage 1|2|3|all] [--expand-try] [--ckpt-interval SECS]`
+- `reachproj <rows> <cols> <stream_dir> --work-dir DIR [--stage 1|2|3|all|uf|cand] [--expand-try] [--ckpt-interval SECS]`
   — stage 1: exact reachable-set BFS (`--expand-try` = paper-B reachability); stage 2:
-  self-symmetric bitset; stage 3: project reachable ∩ stream and un-fold → Table 8 / A.1.
+  self-symmetric bitset; stage 3: project reachable ∩ stream and un-fold → Table 8 / A.1;
+  `cand`: export every unreachable representative with its value/DTM for the author-ZDD check.
 - `disksolve <rows> <cols> <workdir>` — the independent disk external-sort retrograde.
 - `enumerate [--max N]` — `HashSet` forward census of the 6×5 reachable graph (early growth).
 
@@ -70,6 +71,17 @@ numactl --interleave=all ./target/release/reachproj 6 5 $HDD/6x5_stream \
 numactl --interleave=all ./target/release/reachproj 6 5 $HDD/6x5_stream \
     --work-dir $SSD/rp --stage 3
 #    → 照合B 表8 ... + per-ply Table A.1 (compare to results/table_a1_reachable_vs_paperB.csv)
+
+# 5. export unreachable candidates  (~48 min, one more sequential stream scan)
+numactl --interleave=all ./target/release/reachproj 6 5 $HDD/6x5_stream \
+    --work-dir $SSD/rp --stage cand
+#    → candidates.csv: 4,459,740 rows
+
+# 6. author-ZDD intersection (seconds after building the optional C++ tools)
+make -C tools/paper_b_verification
+tools/paper_b_verification/filter_candidates \
+    $SSD/rp/candidates.csv /tmp/candidates_zdd.csv
+cmp /tmp/candidates_zdd.csv results/candidates_zdd.csv
 ```
 
 **Resume:** any step survives crash / power loss / SIGKILL — re-run the identical
@@ -78,9 +90,10 @@ command; it auto-detects the stream marker (`inmem`) or the `bfs.ckpt` checkpoin
 intra-layer cursor).
 
 **Verifying without re-running 6×5:** `results/` ships the final solution summary, the
-70-round full-space DTM distribution, the per-ply reachable distribution vs paper B, and
-the **SHA256 of the 368 GB stream**. Since the stream is byte-deterministic (independent
-of thread count), a regenerated stream can be checked against that hash and against the
+70-round full-space DTM distribution, the per-ply reachable distribution vs paper B,
+the 30-row author-ZDD intersection, all 60 direct author-database byte checks, and the
+**SHA256 of the 368 GB stream**. Since the stream is byte-deterministic (independent of
+thread count), a regenerated stream can be checked against that hash and against the
 per-round census in `results/full_space_dtm_distribution.csv`.
 
 ## Notes
