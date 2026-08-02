@@ -14,9 +14,9 @@ an **independent reproduction** of the full 6×5 result first published by
 > **Headline check:** **67 of 69** per-move rows match paper B's Table A.1 exactly.
 > The two residual rows are exactly 30 unreachable mirror representatives (60 unfolded
 > positions), confirmed by intersecting all 4,459,740 unreachable candidates with the
-> authors' ZDD. Direct reads from the authors' `db14.bin` also match all 30 available
-> value/DTM bytes. The GPW PDF's truncated ply-48 value is confirmed as 879,284 by the
-> later journal version.
+> authors' ZDD. Direct reads from the authors' `db02.bin`, `db09.bin`, and `db14.bin`
+> also match all 60 value/DTM bytes. The GPW PDF's truncated ply-48 value is confirmed
+> as 879,284 by the later journal version.
 
 The solver itself is a clean-room implementation: a separate engine, ranking, and
 retrograde sharing no code with the original. After the independent computation was
@@ -66,8 +66,9 @@ No brute-force oracle exists at 6×5, so confidence is built from layers that ea
 - **Internal invariants** hold at 6×5: `W+L+D = R_full`, `self_sym = S_full`, the
   Burnside un-fold identity, and the depth-1 win/lose parity over all 70 rounds.
 - **Author-data cross-check**: all 4,459,740 unreachable candidates were intersected
-  with the authors' ZDD, yielding exactly 30 mirror reps; 30 available bytes in
-  `db14.bin` agree with the independent values and DTMs with zero mismatches.
+  with the authors' ZDD, yielding exactly 30 mirror reps; all 60 bytes across
+  `db02.bin`, `db09.bin`, and `db14.bin` agree with the independent values and DTMs
+  with zero mismatches.
 - **Determinism + crash-safety**: byte-identical output across thread counts; real
   `kill -9` → resume → byte-identical answer, verified at 4×5 and 5×5.
 

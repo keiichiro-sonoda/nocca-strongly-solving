@@ -10,7 +10,7 @@ The large inputs are intentionally not committed:
   `2abbadf791ddd421cee615f9db73e434b60ed67e37a10ea86f8e369382125405`)
 - `dbNN.bin`: author database shards, 9,864,659,952 bytes each
 
-The 30-row intersection and the 30 direct `db14.bin` byte checks are committed
+The 30-row intersection and all 60 direct author-database byte checks are committed
 under [`results/`](../../results/).
 
 ## Build
@@ -75,14 +75,17 @@ means Lose. The verifier checks the ID-to-shard mapping, seeks only the listed
 bytes, and compares each byte with the independently computed DTM.
 
 ```sh
-tools/paper_b_verification/verify_db \
-  results/candidates_zdd.csv \
-  /path/to/db14.bin \
-  > /tmp/db14_verification.csv
-cmp /tmp/db14_verification.csv results/db14_verification.csv
+for shard in db02 db09 db14; do
+  tools/paper_b_verification/verify_db \
+    results/candidates_zdd.csv \
+    /path/to/${shard}.bin \
+    > /tmp/${shard}_verification.csv
+  cmp /tmp/${shard}_verification.csv results/${shard}_verification.csv
+done
 ```
 
-`db14.bin` covers both orientations of 15 representatives: 24 Win bytes equal
-`1` and 6 Lose bytes equal `4`, with zero mismatches. Checking one orientation
-of every representative additionally requires `db09.bin`; checking both
-orientations additionally requires `db02.bin`.
+`db02.bin` contains the mirror IDs of 15 representatives, `db09.bin` contains their
+primary IDs, and `db14.bin` contains both orientations of the other 15 representatives.
+Together they cover 60 distinct IDs: all 54 Win bytes equal `1` and all 6 Lose bytes
+equal `4`, with zero mismatches. Input and output SHA-256 fingerprints are recorded in
+[`results/paper_b_zdd_verification.md`](../../results/paper_b_zdd_verification.md).

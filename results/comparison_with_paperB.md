@@ -92,7 +92,8 @@ to the same 30-cell array as a round-trip check. Exactly **30** rows were member
 - 0 self-symmetric
 
 Both author IDs for every row are recorded in
-[`candidates_zdd.csv`](candidates_zdd.csv). Direct reads of all 30 entries present in
-the downloaded `db14.bin` shard matched their independent DTM bytes exactly; see
+[`candidates_zdd.csv`](candidates_zdd.csv). Direct reads of all 60 entries across the
+downloaded `db02.bin`, `db09.bin`, and `db14.bin` shards matched their independent DTM
+bytes exactly; see
 [`paper_b_zdd_verification.md`](paper_b_zdd_verification.md). Thus paper B's prediction
 of 60 unfolded unreachable positions is confirmed, not exceeded.

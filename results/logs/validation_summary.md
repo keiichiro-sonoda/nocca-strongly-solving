@@ -48,7 +48,8 @@ comes from layered, *independent* validations that each pass exactly.
   3 Lose/DTM4, no Draw, and no self-symmetric reps.
 - Each author ID was decoded back through the ZDD and matched the original 30-cell
   board exactly; the 30 reps yield 60 distinct IDs after horizontal reflection.
-- Direct random reads of the 30 entries available in `db14.bin` match the independent
-  DTM bytes exactly: 24 bytes equal 1 and 6 bytes equal 4, with zero mismatches.
+- Direct random reads of both orientations of all 30 reps across `db02.bin`, `db09.bin`,
+  and `db14.bin` match the independent DTM bytes exactly: 54 bytes equal 1 and 6 bytes
+  equal 4, with zero mismatches among 60 distinct author IDs.
 
 See `RESULT.md` / `comparison_with_paperB.md` for the final figures.

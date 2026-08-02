@@ -23,21 +23,37 @@ rank, independent value/DTM, board, both author ZDD IDs, database shard, and byt
 offset. Its SHA-256 is
 `67cbf24dc42303b44e880745be5ea4dbfcf6f5b77ab18a0adeb5eb05cca415ee`.
 
-## Direct `db14.bin` check
+## Direct author-database check (60/60)
 
-The authors' `db14.bin` shard has the documented size of 9,864,659,952 bytes.
-It contains both orientations of 15 of the 30 representatives. Random access at
-the 30 ZDD-derived offsets produced:
+Both author IDs of every representative were read directly from the three applicable
+database shards. Each shard has the documented size of 9,864,659,952 bytes. Random
+access at all 60 ZDD-derived offsets produced:
 
-| expected byte | meaning | entries | mismatches |
-|---:|---|---:|---:|
-| 1 | Win / DTM 1 | 24 | 0 |
-| 4 | Lose / DTM 4 | 6 | 0 |
-| **total** | | **30** | **0** |
+| shard | orientations covered | byte 1 (Win / DTM 1) | byte 4 (Lose / DTM 4) | total | mismatches |
+|---|---|---:|---:|---:|---:|
+| `db02.bin` | mirror of 15 reps | 15 | 0 | 15 | 0 |
+| `db09.bin` | primary of 15 reps | 15 | 0 | 15 | 0 |
+| `db14.bin` | both orientations of 15 reps | 24 | 6 | 30 | 0 |
+| **total** | **both orientations of all 30 reps** | **54** | **6** | **60** | **0** |
 
-The byte-level evidence is committed as
-[`db14_verification.csv`](db14_verification.csv). The large database shard is
-not redistributed.
+The 60 rows contain 60 distinct author IDs and no duplicate. Their split exactly
+matches the independently solved 54 Win/DTM1 + 6 Lose/DTM4 unfolded positions.
+
+The downloaded shard fingerprints are:
+
+```text
+c81f27b3c376e4bb46117474566b68f594b1917b542578eecc6cc91556c37071  db02.bin
+0df9f19a72fe32c263980663e6686a6c9616678418091549edb5cadafc739c63  db09.bin
+803dba7e9a004124ed9e72d7ec226db942d02d15730db2e077b034dafe81557e  db14.bin
+```
+
+The byte-level evidence is committed as [`db02_verification.csv`](db02_verification.csv),
+[`db09_verification.csv`](db09_verification.csv), and
+[`db14_verification.csv`](db14_verification.csv). Their SHA-256 fingerprints are,
+respectively, `4412301df9c8ff44d3c64719f84f0002c4c2ca1b154e43a826c0bf9bf547b2a7`,
+`1b80b639005a76621a1ba1b0ee35c061ce78984d7251c374bb4f909bb5f49c3b`, and
+`9d628abf089624e37bee48639d32fea3ebc66a63aa1734143acb6824b26e2fb8`.
+The large database shards are not redistributed.
 
 ## Correct interpretation of the 45-representative count difference
 

@@ -91,10 +91,10 @@ intra-layer cursor).
 
 **Verifying without re-running 6×5:** `results/` ships the final solution summary, the
 70-round full-space DTM distribution, the per-ply reachable distribution vs paper B,
-the 30-row author-ZDD intersection, direct database-byte evidence, and the **SHA256 of
-the 368 GB stream**. Since the stream is byte-deterministic (independent of thread
-count), a regenerated stream can be checked against that hash and against the per-round
-census in `results/full_space_dtm_distribution.csv`.
+the 30-row author-ZDD intersection, all 60 direct author-database byte checks, and the
+**SHA256 of the 368 GB stream**. Since the stream is byte-deterministic (independent of
+thread count), a regenerated stream can be checked against that hash and against the
+per-round census in `results/full_space_dtm_distribution.csv`.
 
 ## Notes
 - `--base` disables the (oracle-identical) speed levers — use it to re-verify

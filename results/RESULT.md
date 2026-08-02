@@ -45,9 +45,10 @@ Table 8 residual separates into Win 54 + Lose 6 from the unreachable set and Dra
 from those reachable exceptional terminals.
 
 This exactly confirms paper B's prediction of 60 unreachable positions. The complete
-30-row ZDD intersection is in `candidates_zdd.csv`; direct random access to the 30
-corresponding entries available in `db14.bin` independently confirmed 24 bytes of
-Win/DTM1 (`1`) and 6 bytes of Lose/DTM4 (`4`) with zero mismatches.
+30-row ZDD intersection is in `candidates_zdd.csv`; direct random access to both author
+IDs for every representative across `db02.bin`, `db09.bin`, and `db14.bin`
+independently confirmed all 60 bytes: 54 Win/DTM1 (`1`) and 6 Lose/DTM4 (`4`), with
+zero mismatches.
 
 The GPW Table A.1 PDF truncates ply 48 as "879 28". The value is **879,284**: it is
 forced by the Table 8 lose total and printed in full in the later peer-reviewed journal
@@ -59,7 +60,8 @@ version's Table A·3.
 - `comparison_with_paperB.md` — the four comparisons (A/B/C/D) in detail.
 - `paper_b_zdd_verification.md` — exhaustive ZDD intersection and direct DB-byte check.
 - `candidates_zdd.csv` — all 30 unreachable ZDD members with both author IDs/offsets.
-- `db14_verification.csv` — the 30 directly checked author database bytes.
+- `db02_verification.csv`, `db09_verification.csv`, `db14_verification.csv` — all 60
+  directly checked author database bytes.
 - `dtm_stream.sha256` — byte-exact fingerprint of the 368 GB DTM stream (regenerable; see README).
 - `logs/` — solve + reachability + validation logs.
 
