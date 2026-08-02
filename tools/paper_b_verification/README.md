@@ -22,6 +22,11 @@ make -C tools/paper_b_verification
 `zdd.cpp` and `zdd.hpp` are the authors' public-domain `sample-code-2` ZDD
 implementation; see [NOTICE.md](NOTICE.md).
 
+The supplemental `readme.txt` maps `sample-code-1` to the GPW 2022 paper and
+`sample-code-2` to document [2], the journal manuscript still listed as submitted
+when that readme was written; the database is common to both. This verifier therefore
+uses the ZDD implementation paired with the peer-reviewed journal version.
+
 ## 1. Generate the unreachable pool
 
 After stages 1 and 2 and the full-space solve have produced `reachable.bits`
