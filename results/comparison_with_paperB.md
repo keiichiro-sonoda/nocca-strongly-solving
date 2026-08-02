@@ -19,8 +19,9 @@ self-symmetric rep ↔ 1. So, per value/per ply (Burnside):
     pseudo = 2 · (mirror count) − (self-symmetric count)
 
 Cross-checks: self-symmetric reps over R_full = `S_full = 3,623,508` (matches
-`mirror_rank::counts().s_full`); over the reachable set `S_reach = 3,608,880`
-(= 2·73,986,754,080 − 147,969,899,280, paper B's own figures).
+`mirror_rank::counts().s_full`); over both the exact non-terminal comparison set
+and paper B's ZDD set the count is `3,608,880`. The 30 unreachable reps and 15
+exceptional-terminal reps identified below are all non-self-symmetric.
 
 ## A — reachable representative count
 
@@ -30,12 +31,12 @@ Cross-checks: self-symmetric reps over R_full = `S_full = 3,623,508` (matches
   *including* all 4,459,725 no-move (stalemate) terminal positions.
 - For the like-for-like non-terminal comparison, exclude those no-move terminals:
   **73,986,754,035**. Paper B's folded pseudo-reachable count is **45** larger.
-- The paper's **30** no-legal-move terminal configurations are not part of that
-  non-terminal residual; they are checked separately in (D) and match exactly.
-- A clean identity holds exactly: `R_full − 73,986,754,080 = 8,919,420 = 2·no_move − 30`,
-  where `no_move = 4,459,725` and the **30** is the paper B no-legal-move terminal count.
-  This identity is a consistency check for the terminal-counting convention, separate
-  from the 45 pseudo-reachable-but-not-truly-reachable reps above.
+- That **45** decomposes into two different sets: **30** ZDD members that are not
+  actually reachable, plus **15** mirror reps (30 unfolded positions) of reachable
+  no-move terminals retained as `unknown` in the authors' database.
+- Equivalently, with exact reachability `R`, all no-move terminals `N`, the authors'
+  ZDD set `P`, retained terminals `T`, and unreachable ZDD members `U`:
+  `P = (R − (N − T)) ∪ U`, with `|T|=15` and `|U|=30`.
 
 ## B — Table 8 (reachable W/L/D, pseudo-reachable)
 
@@ -45,32 +46,53 @@ Cross-checks: self-symmetric reps over R_full = `S_full = 3,623,508` (matches
 | lose (no-move/DTM0 excluded) | 41,129,930,503 | 41,129,930,509 |
 | draw | 695,889,830 | 695,889,860 |
 
-Residuals −54 / −6 / −30 (pseudo) = 90 pseudo = **45 mirror** = the same 45 of (A).
-(no-move DTM-0 stalemate losses, 8,912,136 pseudo, are excluded as paper B does.)
+The three residuals do not all represent unreachable positions:
+
+- Win −54 and Lose −6 are the 30 unreachable mirror reps in `U`, unfolded to
+  60 positions.
+- Draw −30 is the 30 reachable exceptional terminals in `T`, which the authors'
+  database stores as `unknown` while the exact non-terminal comparison excludes them.
+
+No-move DTM0 losses outside `T` are excluded from both sides of this comparison.
 
 ## C — Table A.1 (per-ply distribution, all 69 plies)
 
 **67 of 69 rows match exactly** (`table_a1_reachable_vs_paperB.csv`). The two that
-differ are ply 1 (−54) and ply 4 (−6) — the same 45-rep residual, un-folded.
+differ are ply 1 (−54) and ply 4 (−6), exactly the 27 Win/DTM1 and 3 Lose/DTM4
+unreachable mirror reps after un-folding.
 
-Special note on ply 48: paper B's PDF prints "879 28" (the last digit is dropped in
-the published typesetting). This work computes **879,284**, which is independently
-forced by paper B's own consistency (Table A.1 lose rows must sum to Table 8 lose =
-41,129,930,509). So this work *recovers the dropped digit*, and ply 48 matches.
+Special note on ply 48: the GPW PDF prints "879 28" (the last digit is truncated).
+This work computes **879,284**, which is forced by Table A.1's lose rows summing to
+Table 8 lose = 41,129,930,509 and is printed in full in the later journal version's
+Table A·3.
 
 ## D — pinpoint checks
 
 - deepest: **ply-69 wins = 30** — EXACT (full-space r69 = 15 mirror, all reachable,
   none self-symmetric → 2·15 = 30 pseudo).
-- terminal (no-move) configs = **30** — EXACT (the "30" in the identity of (A)).
+- exceptional no-move configs retained as unknown = **30** unfolded positions — EXACT.
 - average legal moves over non-terminal reachable nodes = **23.391** ≈ paper B 23.4.
 
-## What the 45-rep residual is
+## Exhaustive identification of the unreachable set
 
 Paper B defines "擬到達可能" (pseudo-reachable) as a configuration satisfying certain
 combinatorial conditions — by construction a **superset** of the truly-reachable set
 (their §方法: "ゲーム開始点から到達可能で…配置は **すべて** 擬到達可能"). This work's
 forward BFS computes the **exact** truly-reachable set (validated bit-for-bit against an
-independent `HashSet<canonical_key>` BFS at 3×3 / 4×3 / 4×4). The 45 reps are
-pseudo-reachable-but-not-truly-reachable; this work correctly excludes them, so the
-distributions agree to within those 45 reps (6e-10 of R_full).
+independent `HashSet<canonical_key>` BFS at 3×3 / 4×3 / 4×4).
+
+`reachproj --stage cand` enumerated all **4,459,740** clear bits of the 6×5 exact
+reachable bitset and attached each full-space value/DTM in one stream pass. The
+authors' ZDD was then applied to every row, with each computed author ID decoded back
+to the same 30-cell array as a round-trip check. Exactly **30** rows were members:
+
+- 27 Win/DTM1 (15 immediate try wins, 12 other one-ply wins)
+- 3 Lose/DTM4
+- 0 Draw
+- 0 self-symmetric
+
+Both author IDs for every row are recorded in
+[`candidates_zdd.csv`](candidates_zdd.csv). Direct reads of all 30 entries present in
+the downloaded `db14.bin` shard matched their independent DTM bytes exactly; see
+[`paper_b_zdd_verification.md`](paper_b_zdd_verification.md). Thus paper B's prediction
+of 60 unfolded unreachable positions is confirmed, not exceeded.

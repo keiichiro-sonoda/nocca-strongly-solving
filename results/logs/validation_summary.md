@@ -41,4 +41,14 @@ comes from layered, *independent* validations that each pass exactly.
   exactly (plies 64–69, including ply-69 = 30) — an independent landing on the
   published deepest numbers.
 
+## 7. Authors' ZDD and database agree
+
+- Every one of the 4,459,740 exact-unreachable mirror reps was tested against the
+  authors' 147,969,899,280-path ZDD. Exactly 30 reps are members: 27 Win/DTM1,
+  3 Lose/DTM4, no Draw, and no self-symmetric reps.
+- Each author ID was decoded back through the ZDD and matched the original 30-cell
+  board exactly; the 30 reps yield 60 distinct IDs after horizontal reflection.
+- Direct random reads of the 30 entries available in `db14.bin` match the independent
+  DTM bytes exactly: 24 bytes equal 1 and 6 bytes equal 4, with zero mismatches.
+
 See `RESULT.md` / `comparison_with_paperB.md` for the final figures.

@@ -12,11 +12,17 @@ dtm.meta
 # BFS checkpoints / retrograde snapshots:
 bfs.*
 snap.*
+# Candidate-pool exports and author database shards:
+candidates.csv
+candidates.csv.gz
+db??.bin
 
 # Copyrighted paper (not ours to distribute):
 *.pdf
 
 # scratch
 .libtest.log
+/tools/paper_b_verification/filter_candidates
+/tools/paper_b_verification/verify_db
 
 # NOTE: Cargo.lock IS committed (this crate ships binaries → reproducible builds).

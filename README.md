@@ -11,14 +11,18 @@ an **independent reproduction** of the full 6×5 result first published by
 > retrograde analysis. The famous "**first player wins the initial position in 41
 > moves**" is just one entry of that full solution.
 
-> **Headline check:** the full per-move distribution of decided positions matches paper
-> B's Table A.1 to **45 representatives out of 73.99 billion** (6×10⁻¹⁰). The only
-> difference: paper B reports over a *pseudo-reachable* (over-approximate) set, while
-> this work computes the *exact* reachable set — so our numbers are the precise subset,
-> and we even recover a digit the published table dropped (ply-48).
+> **Headline check:** **67 of 69** per-move rows match paper B's Table A.1 exactly.
+> The two residual rows are exactly 30 unreachable mirror representatives (60 unfolded
+> positions), confirmed by intersecting all 4,459,740 unreachable candidates with the
+> authors' ZDD. Direct reads from the authors' `db14.bin` also match all 30 available
+> value/DTM bytes. The GPW PDF's truncated ply-48 value is confirmed as 879,284 by the
+> later journal version.
 
-Clean-room implementation: a separate engine, ranking, and solvers, sharing no code with
-the original. See [`results/RESULT.md`](results/RESULT.md) and
+The solver itself is a clean-room implementation: a separate engine, ranking, and
+retrograde sharing no code with the original. After the independent computation was
+complete, the optional post-hoc verifier under `tools/paper_b_verification/` deliberately
+used the authors' public-domain ZDD code to cross-check set membership and database IDs;
+it is not linked into the solver. See [`results/RESULT.md`](results/RESULT.md) and
 [`results/comparison_with_paperB.md`](results/comparison_with_paperB.md).
 
 ## What was solved
@@ -28,8 +32,8 @@ the original. See [`results/RESULT.md`](results/RESULT.md) and
 | **All positions** (the strong solution) | value + DTM for **73,995,673,500** mirror reps |
 | full-space W / L / D | 53,077,668,702 / 20,570,045,468 / 347,959,330 |
 | initial position (6×5) | **first-player WIN, DTM 41** |
-| reachable W/L/D (Table 8) / per-ply (Table A.1) | match paper B to 45 reps (6×10⁻¹⁰); **67/69 rows exact** |
-| deepest win / no-move terminals / avg branching | 69 plies (30) / 30 / 23.4 — all match |
+| reachable comparison (Table 8 / Table A.1) | 30 unreachable reps = 60 positions; **67/69 rows exact** |
+| deepest win / paper's exceptional terminals / avg branching | 69 plies (30) / 30 / 23.4 — all match |
 
 ## How it works
 
@@ -61,6 +65,9 @@ No brute-force oracle exists at 6×5, so confidence is built from layers that ea
   (3×3/4×3/4×4), and matches known reachable counts (4×4, 4×5, 5×5) exactly.
 - **Internal invariants** hold at 6×5: `W+L+D = R_full`, `self_sym = S_full`, the
   Burnside un-fold identity, and the depth-1 win/lose parity over all 70 rounds.
+- **Author-data cross-check**: all 4,459,740 unreachable candidates were intersected
+  with the authors' ZDD, yielding exactly 30 mirror reps; 30 available bytes in
+  `db14.bin` agree with the independent values and DTMs with zero mismatches.
 - **Determinism + crash-safety**: byte-identical output across thread counts; real
   `kill -9` → resume → byte-identical answer, verified at 4×5 and 5×5.
 
@@ -99,15 +106,21 @@ src/                 engine, ranking, retrograde strong-solvers (+ a forward wea
   bin/{inmem, reachproj, disksolve, enumerate}
 results/             solution summary, distributions, comparison, validation logs, stream SHA256
 docs/                design notes (incl. the earlier forward weak-solving attempt)
+tools/paper_b_verification
+                     author-ZDD intersection + direct database-byte verifier
 ```
 
-The 368 GB DTM stream and the 9.25 GB bitsets are **not** committed (regenerable; the
-stream is byte-deterministic — its SHA256 and per-round census are in `results/`).
+The 368 GB DTM stream, 9.25 GB bitsets, 547 MB candidate pool, and author database
+shards are **not** committed. Small verification outputs, hashes, and reproduction
+instructions are in `results/` and `tools/paper_b_verification/`.
 
 ## Dependencies & license
 
-Single dependency: [`rayon`](https://crates.io/crates/rayon) (parallelism). No copyleft
-dependencies. Dual-licensed **MIT OR Apache-2.0** (`LICENSE-MIT`, `LICENSE-APACHE`).
+The Rust solver's single dependency is [`rayon`](https://crates.io/crates/rayon)
+(parallelism). The optional C++ verification tools require only a C++11 compiler;
+their vendored author ZDD source is public domain as documented in its notice. No
+copyleft dependencies. The project is dual-licensed **MIT OR Apache-2.0**
+(`LICENSE-MIT`, `LICENSE-APACHE`).
 
 ## References
 
@@ -119,6 +132,8 @@ context, not used as source material.
 - 山本 敦也, 保木 邦仁. **NOCCA×NOCCAの強解決** (Strongly Solving NOCCA×NOCCA).
   第27回ゲーム・プログラミングワークショップ (GPW 2022), 情報処理学会, 2022.
   <https://cir.nii.ac.jp/crid/1050856970555547904>
+- 山本 敦也, 保木 邦仁. **NOCCA × NOCCAの強解決**. 情報処理学会論文誌,
+  Vol.64, No.12, pp.1678–1688, 2023. <https://doi.org/10.20729/00231448>
 
 **Related work**
 
