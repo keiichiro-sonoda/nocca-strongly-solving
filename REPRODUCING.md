@@ -70,7 +70,9 @@ numactl --interleave=all ./target/release/reachproj 6 5 $HDD/6x5_stream \
 # 4. projection → Table 8 / Table A.1  (~48 min, sequential stream scan)
 numactl --interleave=all ./target/release/reachproj 6 5 $HDD/6x5_stream \
     --work-dir $SSD/rp --stage 3
-#    → 照合B 表8 ... + per-ply Table A.1 (compare to results/table_a1_reachable_vs_paperB.csv)
+#    → Table 8 ALL OK; Table A.1 compared=69 DIFF=0 unchecked=0
+cmp $SSD/rp/table_a1_reachable_vs_paperB.csv \
+    results/table_a1_reachable_vs_paperB.csv
 
 # 5. export unreachable candidates  (~48 min, one more sequential stream scan)
 numactl --interleave=all ./target/release/reachproj 6 5 $HDD/6x5_stream \

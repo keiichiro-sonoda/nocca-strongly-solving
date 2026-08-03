@@ -1,12 +1,12 @@
-# Table A.1: per-ply (=DTM) distribution over the REACHABLE set, pseudo-reachable (mirror-unfolded) counts.
-# computed_pseudo = this work (exact reachable set, un-folded 2*mirror - self_sym).
-# paperB = Yamamoto-Hoki (GPW 2022) Table A.1 (their pseudo-reachable; over-approximation).
-# diff = computed - paperB.  (paperB r48 last digit dropped in the PDF; recovered as 879,284 via the lose-row=Table-8-lose constraint, which equals our computed value.)
+# Table A.1: per-ply (=DTM) distribution over paper B's P set, pseudo-reachable (mirror-unfolded) counts.
+# computed_pseudo = stage 3 R-to-P normalization: P = (R - (N - T)) union U.
+# paperB = Yamamoto-Hoki (GPW 2022) Table A.1.
+# diff = computed - paperB. (The GPW PDF truncates ply 48; the journal version gives 879,284.)
 ply,kind,computed_pseudo,paperB,diff
-1,win,77645562774,77645562828,-54
+1,win,77645562828,77645562828,0
 2,lose,22410730165,22410730165,0
 3,win,15142536934,15142536934,0
-4,lose,7707358879,7707358885,-6
+4,lose,7707358885,7707358885,0
 5,win,2996378622,2996378622,0
 6,lose,2530587844,2530587844,0
 7,win,1793971952,1793971952,0

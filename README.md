@@ -11,12 +11,11 @@ an **independent reproduction** of the full 6×5 result first published by
 > retrograde analysis. The famous "**first player wins the initial position in 41
 > moves**" is just one entry of that full solution.
 
-> **Headline check:** **67 of 69** per-move rows match paper B's Table A.1 exactly.
-> The two residual rows are exactly 30 unreachable mirror representatives (60 unfolded
-> positions), confirmed by intersecting all 4,459,740 unreachable candidates with the
-> authors' ZDD. Direct reads from the authors' `db02.bin`, `db09.bin`, and `db14.bin`
-> also match all 60 value/DTM bytes. The GPW PDF's truncated ply-48 value is confirmed
-> as 879,284 by the later journal version.
+> **Headline check:** after normalizing the exact reachable set `R` to paper B's set
+> `P`, **all 69** per-move rows and all three Table 8 totals match exactly. The set
+> correction is independently fixed by the authors' ZDD and all 60 applicable database
+> bytes. The GPW PDF's truncated ply-48 value is confirmed as 879,284 by the later
+> journal version.
 
 The solver itself is a clean-room implementation: a separate engine, ranking, and
 retrograde sharing no code with the original. After the independent computation was
@@ -32,7 +31,7 @@ it is not linked into the solver. See [`results/RESULT.md`](results/RESULT.md) a
 | **All positions** (the strong solution) | value + DTM for **73,995,673,500** mirror reps |
 | full-space W / L / D | 53,077,668,702 / 20,570,045,468 / 347,959,330 |
 | initial position (6×5) | **first-player WIN, DTM 41** |
-| reachable comparison (Table 8 / Table A.1) | 30 unreachable reps = 60 positions; **67/69 rows exact** |
+| normalized comparison (Table 8 / Table A.1) | W/L/D exact; **69/69 rows exact** |
 | deepest win / paper's exceptional terminals / avg branching | 69 plies (30) / 30 / 23.4 — all match |
 
 ## How it works
@@ -50,8 +49,9 @@ restrict the solution (which already covers every position):
 2. **Forward reachability** (`reachable_bfs`): a parallel bitset BFS from the initial
    position computes the **exact reachable set** (73.99 billion reps). 6×5: ~13 h.
 3. **Projection + un-fold** (`reachproj`): intersect the reachable set with the DTM
-   stream and un-fold mirror reps to pseudo-reachable counts
-   (`pseudo = 2·mirror − self_symmetric`, Burnside) → paper B's Table 8 / A.1.
+   stream, normalize `R` to paper B's `P = (R − (N − T)) ∪ U`, and un-fold mirror
+   reps to pseudo-reachable counts (`pseudo = 2·mirror − self_symmetric`, Burnside)
+   → paper B's Table 8 / A.1.
 
 ## Why it's correct (independent validation)
 
@@ -69,6 +69,9 @@ No brute-force oracle exists at 6×5, so confidence is built from layers that ea
   with the authors' ZDD, yielding exactly 30 mirror reps; all 60 bytes across
   `db02.bin`, `db09.bin`, and `db14.bin` agree with the independent values and DTMs
   with zero mismatches.
+- **Full 6×5 projection**: the 47.6-minute stage-3 stream pass reproduces all three
+  Table 8 totals and all 69 Table A.1 rows exactly after the independently determined
+  `R → P` normalization.
 - **Determinism + crash-safety**: byte-identical output across thread counts; real
   `kill -9` → resume → byte-identical answer, verified at 4×5 and 5×5.
 
