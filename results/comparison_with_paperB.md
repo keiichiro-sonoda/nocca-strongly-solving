@@ -42,24 +42,34 @@ exceptional-terminal reps identified below are all non-self-symmetric.
 
 | | this work | paper B |
 |---|---|---|
-| win | 106,144,078,857 | 106,144,078,911 |
-| lose (no-move/DTM0 excluded) | 41,129,930,503 | 41,129,930,509 |
-| draw | 695,889,830 | 695,889,860 |
+| win | 106,144,078,911 | 106,144,078,911 |
+| lose | 41,129,930,509 | 41,129,930,509 |
+| draw | 695,889,860 | 695,889,860 |
 
-The three residuals do not all represent unreachable positions:
+Stage 3 first projects the independent full-space solution onto exact reachability `R`:
 
-- Win −54 and Lose −6 are the 30 unreachable mirror reps in `U`, unfolded to
-  60 positions.
-- Draw −30 is the 30 reachable exceptional terminals in `T`, which the authors'
-  database stores as `unknown` while the exact non-terminal comparison excludes them.
+```text
+mirror-rep W/L/D = 53,073,229,223 / 20,570,027,276 / 347,957,261
+self-sym  W/L/D =      2,379,589 /      1,211,913 /      24,692
+```
 
-No-move DTM0 losses outside `T` are excluded from both sides of this comparison.
+It then maps `R` to `P = (R − (N − T)) ∪ U`: remove all 4,459,725 no-move
+terminals `N`, retain 15 representatives `T` as Draw, and add the independently
+identified `U` as 27 Win/DTM1 + 3 Lose/DTM4. Only `N` contains self-symmetric reps
+(7,314), giving normalized self-symmetric W/L/D =
+2,379,589 / 1,204,599 / 24,692 and folded `|P| = 73,986,754,080`. Un-folding these
+counts produces the exact Table 8 values above and pseudo total 147,969,899,280.
 
 ## C — Table A.1 (per-ply distribution, all 69 plies)
 
-**67 of 69 rows match exactly** (`table_a1_reachable_vs_paperB.csv`). The two that
-differ are ply 1 (−54) and ply 4 (−6), exactly the 27 Win/DTM1 and 3 Lose/DTM4
-unreachable mirror reps after un-folding.
+After the same `R → P` normalization—excluding `N − T`, adding `T` to Draw, and
+adding `U` back as +54 at ply 1 and +6 at ply 4—**all 69 rows match exactly**
+([`table_a1_reachable_vs_paperB.csv`](table_a1_reachable_vs_paperB.csv)): zero
+differences and no unchecked rows.
+
+The 6×5 stage-3 stream pass took 2,857.5 seconds (47.6 minutes), with peak RSS
+17.4 GiB. It also writes the comparison CSV directly so a rerun can be checked
+byte-for-byte against the committed artifact.
 
 Special note on ply 48: the GPW PDF prints "879 28" (the last digit is truncated).
 This work computes **879,284**, which is forced by Table A.1's lose rows summing to

@@ -41,7 +41,19 @@ comes from layered, *independent* validations that each pass exactly.
   exactly (plies 64–69, including ply-69 = 30) — an independent landing on the
   published deepest numbers.
 
-## 7. Authors' ZDD and database agree
+## 7. Full 6×5 projection matches every published aggregate
+
+- The normalized stage-3 pass scanned the 368 GB DTM stream in 2,857.5 seconds
+  (47.6 minutes), with peak RSS 17.4 GiB.
+- Its raw exact-reachable mirror W/L/D is
+  53,073,229,223 / 20,570,027,276 / 347,957,261. Applying
+  `P = (R − (N − T)) ∪ U` gives folded `|P| = 73,986,754,080` and un-folded
+  W/L/D = 106,144,078,911 / 41,129,930,509 / 695,889,860, all exact.
+- All 69 Table A.1 rows match, with zero differences and no unchecked rows. The
+  normalized self-symmetric total 3,608,880 also matches the journal appendix's
+  published folding identity.
+
+## 8. Authors' ZDD and database agree
 
 - Every one of the 4,459,740 exact-unreachable mirror reps was tested against the
   authors' 147,969,899,280-path ZDD. Exactly 30 reps are members: 27 Win/DTM1,

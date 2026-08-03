@@ -28,21 +28,25 @@ projects the full-space solution onto it.
 | comparison | this work | paper B | difference |
 |---|---|---|---|
 | **A** exact non-terminal reps vs ZDD set | 73,986,754,035 | 73,986,754,080 | 45 (= 30 unreachable + 15 retained terminals) |
-| **B** Table 8, reachable W (pseudo) | 106,144,078,857 | 106,144,078,911 | −54 |
-| **B** Table 8, reachable L (pseudo, no-move excl.) | 41,129,930,503 | 41,129,930,509 | −6 |
-| **B** Table 8, reachable D (pseudo) | 695,889,830 | 695,889,860 | −30 |
-| **C** Table A.1 (69 plies) | — | — | **67 / 69 rows EXACT** |
+| **B** Table 8, normalized P, W (pseudo) | 106,144,078,911 | 106,144,078,911 | **0** |
+| **B** Table 8, normalized P, L (pseudo) | 41,129,930,509 | 41,129,930,509 | **0** |
+| **B** Table 8, normalized P, D (pseudo) | 695,889,860 | 695,889,860 | **0** |
+| **C** Table A.1 (69 plies) | — | — | **69 / 69 rows EXACT** |
 | **D** deepest 69-ply wins | 30 | 30 | **EXACT** |
 | **D** exceptional no-move configs retained as unknown | 30 | 30 | **EXACT** |
 | **D** avg legal moves (non-terminal) | 23.391 | 23.4 | match |
 
-The 45-representative cardinality difference in (A) is not 45 unreachable reps.
-An exhaustive intersection with the authors' ZDD finds exactly **30 unreachable
-mirror reps**: 27 Win/DTM1 and 3 Lose/DTM4, all non-self-symmetric, hence 60 unfolded
-positions. The other 15 mirror reps are the 30 unfolded no-move terminal positions
-that the authors explicitly retained as `unknown` in their database. Therefore the
-Table 8 residual separates into Win 54 + Lose 6 from the unreachable set and Draw 30
-from those reachable exceptional terminals.
+The raw exact-`R` projection differs from paper B by Win −54, Lose −6, and Draw −30.
+These are not unresolved result differences: an exhaustive intersection with the
+authors' ZDD identifies **30 unreachable mirror reps** in `U` (27 Win/DTM1 and
+3 Lose/DTM4), while 15 reachable no-move reps in `T` remain `unknown` in the authors'
+database. Stage 3 therefore applies `P = (R − (N − T)) ∪ U`: it excludes `N − T`,
+adds `T` to Draw, and adds `U` at DTM 1/4. The normalized Table 8 totals and all 69
+Table A.1 rows then match exactly.
+
+The 6×5 normalized stage-3 pass took 2,857.5 seconds (47.6 minutes) with 17.4 GiB
+peak RSS. Its generated `table_a1_reachable_vs_paperB.csv` has zero differences and
+no unchecked rows.
 
 This exactly confirms paper B's prediction of 60 unreachable positions. The complete
 30-row ZDD intersection is in `candidates_zdd.csv`; direct random access to both author
@@ -56,7 +60,7 @@ version's Table A·3.
 
 ## Files
 - `full_space_dtm_distribution.csv` — 70-round full-space DTM distribution (win/lose per DTM).
-- `table_a1_reachable_vs_paperB.csv` — per-ply reachable distribution, this work vs paper B.
+- `table_a1_reachable_vs_paperB.csv` — per-ply `R → P` normalized distribution vs paper B.
 - `comparison_with_paperB.md` — the four comparisons (A/B/C/D) in detail.
 - `paper_b_zdd_verification.md` — exhaustive ZDD intersection and direct DB-byte check.
 - `candidates_zdd.csv` — all 30 unreachable ZDD members with both author IDs/offsets.

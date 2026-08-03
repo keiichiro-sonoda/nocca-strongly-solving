@@ -21,7 +21,7 @@ use nocca::inmem_retro::{
     reachable_bfs, self_sym_bitset, BitSet,
 };
 use nocca::mirror_rank::MirrorRanker;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -191,66 +191,108 @@ fn main() {
         let proj = project_stream(&stream_dir, &reach, &ss).expect("project_stream");
         eprintln!("[reachproj] stream projected in {:.1}s", t.elapsed().as_secs_f64());
 
-        // Table 8 excludes no-move/DTM0 terminals. Keep their round-0 counts
-        // separate and compare the exact reachable non-terminal set R − N.
+        // First retain the raw exact-reachable projection R. The D1 stream records
+        // no-move terminals as round-0 losses, so they are present in these totals.
         let (mut mw, mut ml, mut sw, mut sl) = (0u64, 0u64, 0u64, 0u64);
         for r in &proj {
-            if r.round == 0 {
-                continue;
-            }
             mw += r.mwin;
             ml += r.mlose;
             sw += r.swin;
             sl += r.slose;
         }
-        let round0 = proj.iter().find(|r| r.round == 0);
-        let no_move_mirror = round0.map_or(0, |r| r.mlose);
-        let no_move_sym = round0.map_or(0, |r| r.slose);
-        let nonterm_total = reach_total - no_move_mirror;
-        let nonterm_sym_total = sreach_total - no_move_sym;
-        let mdraw = nonterm_total - mw - ml;
-        let sdraw = nonterm_sym_total - sw - sl;
+        let mdraw = reach_total - mw - ml;
+        let sdraw = sreach_total - sw - sl;
+        println!("--- STAGE3 raw R (mirror-rep) W/L/D = {mw} / {ml} / {mdraw} (reach={reach_total}) ---");
+        println!("--- raw self-sym R W/L/D = {sw} / {sl} / {sdraw} (S_reach={sreach_total}) ---");
+
+        // Normalize exact reachability R to paper B's pseudo-reachable set P:
+        //   P = (R − (N − T)) ∪ U,  T ⊂ N ⊂ R,  U ∩ R = ∅.
+        // N is the round-0 no-move terminal set. T is the 15-rep subset retained as
+        // `unknown` (Draw) by the authors. U is 27 Win/DTM1 + 3 Lose/DTM4 reps.
+        // T and U are non-self-symmetric, so only N changes self-symmetric counts.
+        let (n_reps, n_sym) = proj
+            .iter()
+            .find(|r| r.round == 0)
+            .map(|r| (r.mlose, r.slose))
+            .unwrap_or((0, 0));
+        let paper_b = (rows, cols) == (6, 5);
+        let (mw, ml, mdraw, sl) = if paper_b {
+            assert!(ml >= n_reps && sl >= n_sym);
+            println!(
+                "--- normalize R→P: remove N={n_reps} (self-sym {n_sym}), retain T={PAPER_T} as Draw, \
+                 add U=Win{PAPER_U_WIN}/DTM{PAPER_U_WIN_DTM}+Lose{PAPER_U_LOSE}/DTM{PAPER_U_LOSE_DTM} ---"
+            );
+            (
+                mw + PAPER_U_WIN,
+                ml - n_reps + PAPER_U_LOSE,
+                mdraw + PAPER_T,
+                sl - n_sym,
+            )
+        } else {
+            println!("--- non-6×5: paper-B normalization is undefined; reporting raw R ---");
+            (mw, ml, mdraw, sl)
+        };
+
         // Un-fold: pseudo = 2*mirror - self_sym.
         let pw = 2 * mw - sw;
         let pl = 2 * ml - sl;
         let pd = 2 * mdraw - sdraw;
-        println!(
-            "--- STAGE3 exact reachable non-terminal (mirror-rep) W/L/D = \
-             {mw} / {ml} / {mdraw} (R−N={nonterm_total}, N={no_move_mirror}) ---"
-        );
-        println!(
-            "--- self-sym non-terminal W/L/D = {sw} / {sl} / {sdraw} \
-             (S_nonterm={nonterm_sym_total}, S_N={no_move_sym}) ---"
-        );
-        println!("=== 照合B 表8 comparison basis W/L/D = {pw} / {pl} / {pd} ===");
-        println!("    paper B 表8              = 106144078911 / 41129930509 / 695889860");
-        println!(
-            "    exact non-terminal un-folded total = {} (paper P = 147969899280)",
-            pw + pl + pd
-        );
+        let p_reps = mw + ml + mdraw;
+        println!("=== 照合B pseudo W/L/D = {pw} / {pl} / {pd} (mirror-rep {mw} / {ml} / {mdraw}, total {p_reps}) ===");
+        if paper_b {
+            println!("    |P| = {p_reps} vs paper {PAPER_P} {}",
+                if p_reps == PAPER_P { "OK" } else { "MISMATCH" });
+            println!("    paper B Table 8 = {PAPER_T8_W} / {PAPER_T8_L} / {PAPER_T8_D}   {}",
+                if (pw, pl, pd) == (PAPER_T8_W, PAPER_T8_L, PAPER_T8_D) { "ALL OK" } else { "DIFF" });
+            println!("    pseudo total = {} (paper {PAPER_PSEUDO_TOTAL} {})", pw + pl + pd,
+                if pw + pl + pd == PAPER_PSEUDO_TOTAL { "OK" } else { "DIFF" });
+            assert_eq!(p_reps, PAPER_P, "paper-B folded total mismatch");
+            assert_eq!((pw, pl, pd), (PAPER_T8_W, PAPER_T8_L, PAPER_T8_D),
+                "paper-B Table 8 mismatch");
+            assert_eq!(pw + pl + pd, PAPER_PSEUDO_TOTAL,
+                "paper-B pseudo total mismatch");
+        }
 
         // Per-ply (DTM) un-folded distribution → Table A.1 (win=odd round, lose=even).
-        // round = DTM = paper手数 (D1 convention). r0 = no-move terminals (DTM0 lose).
+        // Round 0 = N and is outside Table A.1. U contributes at DTM 1 and DTM 4.
         println!("=== 照合C 表A.1 (pseudo per-手数) ===");
         println!("{:>4} {:>6} {:>18} {:>18}", "手数", "種別", "pseudo(=2m-s)", "paperA.1");
+
+        let table_csv_path = work.join("table_a1_reachable_vs_paperB.csv");
+        let mut table_csv = if paper_b {
+            let f = std::fs::File::create(&table_csv_path).expect("create Table A.1 CSV");
+            let mut w = BufWriter::new(f);
+            writeln!(w, "# Table A.1: per-ply (=DTM) distribution over paper B's P set, pseudo-reachable (mirror-unfolded) counts.").unwrap();
+            writeln!(w, "# computed_pseudo = stage 3 R-to-P normalization: P = (R - (N - T)) union U.").unwrap();
+            writeln!(w, "# paperB = Yamamoto-Hoki (GPW 2022) Table A.1.").unwrap();
+            writeln!(w, "# diff = computed - paperB. (The GPW PDF truncates ply 48; the journal version gives 879,284.)").unwrap();
+            writeln!(w, "ply,kind,computed_pseudo,paperB,diff").unwrap();
+            Some(w)
+        } else {
+            None
+        };
+        let (mut compared, mut diffs, mut unchecked) = (0usize, 0usize, 0usize);
         for r in &proj {
             if r.round == 0 {
                 continue;
             }
-            let (m, s, kind) = if r.round % 2 == 1 {
-                (r.mwin, r.swin, "勝ち")
+            let (m, s, kind, csv_kind) = if r.round % 2 == 1 {
+                (r.mwin, r.swin, "勝ち", "win")
             } else {
-                (r.mlose, r.slose, "負け")
+                (r.mlose, r.slose, "負け", "lose")
             };
             if m == 0 {
                 continue;
             }
-            let pseudo = 2 * m - s;
+            let u_add = if paper_b { paper_b_u_reps(r.round) } else { 0 };
+            let pseudo = 2 * (m + u_add) - s;
             let paper = paper_a1(r.round);
             let tag = match paper {
-                Some(p) if p == pseudo => "OK",
-                Some(_) => "DIFF",
-                None => "?",
+                Some(p) => {
+                    compared += 1;
+                    if p == pseudo { "OK" } else { diffs += 1; "DIFF" }
+                }
+                None => { unchecked += 1; "?" }
             };
             println!(
                 "{:>4} {:>6} {:>18} {:>18} {}",
@@ -258,8 +300,22 @@ fn main() {
                 paper.map(|p| p.to_string()).unwrap_or_else(|| "-".into()),
                 tag
             );
+            if let (Some(w), Some(p)) = (table_csv.as_mut(), paper) {
+                writeln!(w, "{},{},{},{},{}", r.round, csv_kind, pseudo, p,
+                    pseudo as i128 - p as i128).unwrap();
+            }
         }
-        println!("    (注: r0=DTM0手詰終端は表8・表A.1の比較対象外)");
+        if paper_b {
+            unchecked += PAPER_A1_ROWS.saturating_sub(compared);
+            println!("    Table A.1 summary: compared={compared} DIFF={diffs} unchecked={unchecked}");
+            assert_eq!(diffs, 0, "paper-B Table A.1 differences remain");
+            assert_eq!(unchecked, 0, "paper-B Table A.1 rows remain unchecked");
+        }
+        if let Some(mut w) = table_csv {
+            w.flush().unwrap();
+            println!("    wrote {}", table_csv_path.display());
+        }
+        println!("    (注: r0=DTM0手詰終端NはTable A.1外。T={PAPER_T}代表のみDrawとしてTable 8へ算入)");
         println!("peakRSS={:.1}GiB", peak_rss_gib());
     }
 
@@ -327,7 +383,6 @@ fn main() {
         let out_path = work.join("candidates.csv");
         let f = std::fs::File::create(&out_path).expect("create candidates.csv");
         let mut w = BufWriter::with_capacity(8 << 20, f);
-        use std::io::Write;
         writeln!(w, "# unreachable mirror reps of {rows}x{cols} (clear bits of reachable.bits)")
             .unwrap();
         writeln!(w, "# board: row 0 (= side-to-move's home row) first, rows split by '/', cells by '|';")
@@ -455,6 +510,26 @@ fn main() {
     }
 }
 
+const PAPER_P: u64 = 73_986_754_080;
+const PAPER_T: u64 = 15;
+const PAPER_U_WIN: u64 = 27;
+const PAPER_U_LOSE: u64 = 3;
+const PAPER_U_WIN_DTM: u32 = 1;
+const PAPER_U_LOSE_DTM: u32 = 4;
+const PAPER_T8_W: u64 = 106_144_078_911;
+const PAPER_T8_L: u64 = 41_129_930_509;
+const PAPER_T8_D: u64 = 695_889_860;
+const PAPER_PSEUDO_TOTAL: u64 = 147_969_899_280;
+const PAPER_A1_ROWS: usize = 69;
+
+fn paper_b_u_reps(ply: u32) -> u64 {
+    match ply {
+        PAPER_U_WIN_DTM => PAPER_U_WIN,
+        PAPER_U_LOSE_DTM => PAPER_U_LOSE,
+        _ => 0,
+    }
+}
+
 /// Paper B Table A.1 per-手数 counts (win on odd, lose on even). Both columns are
 /// verified against Table 8: Σodd = 106,144,078,911 and Σeven = 41,129,930,509.
 /// The GPW PDF truncates ply 48; the journal version's Table A·3 gives 879,284.
@@ -484,13 +559,66 @@ fn paper_a1(ply: u32) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::paper_a1;
+    use super::*;
 
     #[test]
     fn paper_a1_columns_sum_to_table8() {
         let win: u64 = (1..=69).filter(|ply| ply % 2 == 1).filter_map(paper_a1).sum();
         let lose: u64 = (1..=69).filter(|ply| ply % 2 == 0).filter_map(paper_a1).sum();
-        assert_eq!(win, 106_144_078_911);
-        assert_eq!(lose, 41_129_930_509);
+        assert_eq!(win, PAPER_T8_W);
+        assert_eq!(lose, PAPER_T8_L);
+    }
+
+    #[test]
+    fn paper_b_normalization_reproduces_table8() {
+        let (mw, ml, md) = (53_073_229_223, 20_570_027_276, 347_957_261);
+        let (sw, sl, sd) = (2_379_589, 1_211_913, 24_692);
+        let (n, n_sym) = (4_459_725, 7_314);
+        let normalized = (
+            mw + PAPER_U_WIN,
+            ml - n + PAPER_U_LOSE,
+            md + PAPER_T,
+        );
+        let normalized_sym = (sw, sl - n_sym, sd);
+        assert_eq!(normalized.0 + normalized.1 + normalized.2, PAPER_P);
+        assert_eq!(
+            (
+                2 * normalized.0 - normalized_sym.0,
+                2 * normalized.1 - normalized_sym.1,
+                2 * normalized.2 - normalized_sym.2,
+            ),
+            (PAPER_T8_W, PAPER_T8_L, PAPER_T8_D)
+        );
+        assert_eq!(paper_b_u_reps(1), 27);
+        assert_eq!(paper_b_u_reps(4), 3);
+        assert_eq!(paper_b_u_reps(2), 0);
+    }
+
+    #[test]
+    fn committed_table_a1_csv_is_all_exact_and_matches_constants() {
+        let csv = include_str!("../../results/table_a1_reachable_vs_paperB.csv");
+        let mut rows = 0usize;
+        let (mut win, mut lose) = (0u64, 0u64);
+        for line in csv.lines().filter(|line| !line.is_empty() && !line.starts_with('#')) {
+            if line.starts_with("ply,") {
+                continue;
+            }
+            let fields: Vec<&str> = line.split(',').collect();
+            assert_eq!(fields.len(), 5);
+            let ply: u32 = fields[0].parse().unwrap();
+            assert_eq!(ply, rows as u32 + 1, "CSV ply sequence");
+            assert_eq!(fields[1], if ply % 2 == 1 { "win" } else { "lose" });
+            let computed: u64 = fields[2].parse().unwrap();
+            let paper: u64 = fields[3].parse().unwrap();
+            let diff: i128 = fields[4].parse().unwrap();
+            assert_eq!(computed, paper, "ply {ply}");
+            assert_eq!(paper_a1(ply), Some(paper), "ply {ply}");
+            assert_eq!(diff, 0, "ply {ply}");
+            if ply % 2 == 1 { win += computed; } else { lose += computed; }
+            rows += 1;
+        }
+        assert_eq!(rows, PAPER_A1_ROWS);
+        assert_eq!(win, PAPER_T8_W);
+        assert_eq!(lose, PAPER_T8_L);
     }
 }
